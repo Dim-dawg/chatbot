@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+faiss-cpu
+numpy
+python-dotenv
+mistralai
+requests
+pymysql
+PyPDF2

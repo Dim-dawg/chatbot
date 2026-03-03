@@ -1,432 +1,184 @@
-import React, { useState } from 'react';
-import ConnectionSettings from './components/ConnectionSettings';
+import React, { useState, useEffect } from 'react';
 import ChatInterface from './components/ChatInterface';
-import { Database, Loader2, AlertCircle } from 'lucide-react';
+import Dashboard from './components/Dashboard';
+import CalendarPage from './components/CalendarPage';
+import { Database, Loader2, AlertCircle, MessageSquare, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+
+function getPageCapabilities(page: 'dashboard' | 'calendar') {
+  if (page === 'calendar') {
+    return {
+      page: 'calendar',
+      title: 'Schedule Calendar',
+      canDo: [
+        'View hearings grouped by date',
+        'Set start and end date filters',
+        'Load schedules for selected date range',
+      ],
+      dataViews: ['Daily schedule list with case, hearing type, time, and judge'],
+      actions: ['Change date range', 'Refresh schedules'],
+    };
+  }
+
+  return {
+    page: 'dashboard',
+    title: 'Judicial Dashboard',
+    canDo: [
+      'See summary cards (total, active, pending, finalized)',
+      'Search cases by name or claim number',
+      'Filter by case type, judge, and jurisdiction',
+      'Open case detail drawer with overview, parties, and history',
+      'Finalize a case from hearing rows',
+      'Review cases needing action and overdue cases',
+    ],
+    dataViews: ['Monthly trend chart', 'Caseload pie', 'Outcome mix pie', 'Hearings and case tables'],
+    actions: ['Sync dashboard data', 'Open case file', 'Apply/Clear filters', 'Finalize case'],
+  };
+}
 
 export default function App() {
   const [credentials, setCredentials] = useState<any>(null);
   const [schemaContext, setSchemaContext] = useState<any>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activePage, setActivePage] = useState<'dashboard' | 'calendar'>('dashboard');
+  const [selectedCase, setSelectedCase] = useState<string | null>(null);
 
-  const handleConnect = async (creds: any) => {
-    if (!creds) {
-      setCredentials({ database: 'Offline Mode (SQL Generation Only)' });
-      setSchemaContext({
-        "accts_cash_breakdown": ["BASE TABLE"],
-        "accts_cashbook": ["BASE TABLE"],
-        "accts_deposit_payoffs": ["BASE TABLE"],
-        "accts_direct_deposits": ["BASE TABLE"],
-        "accts_exemptions": ["BASE TABLE"],
-        "accts_invoices": ["BASE TABLE"],
-        "accts_monthly_periods": ["BASE TABLE"],
-        "accts_monthly_statements": ["BASE TABLE"],
-        "accts_payin": ["BASE TABLE"],
-        "accts_payment_modes": ["BASE TABLE"],
-        "accts_receipts": ["BASE TABLE"],
-        "accts_revenue_breakdown": ["BASE TABLE"],
-        "accts_reversals": ["BASE TABLE"],
-        "cat_accounting_codes": ["BASE TABLE"],
-        "cat_activities": ["BASE TABLE"],
-        "cat_appeals_category": ["BASE TABLE"],
-        "cat_appeals_definition": ["BASE TABLE"],
-        "cat_appeals_reasons": ["BASE TABLE"],
-        "cat_archive_periods": ["BASE TABLE"],
-        "cat_attorney_admissions": ["BASE TABLE"],
-        "cat_attorneys": ["BASE TABLE"],
-        "cat_bail_conditions": ["BASE TABLE"],
-        "cat_bail_securities": ["BASE TABLE"],
-        "cat_banks": ["BASE TABLE"],
-        "cat_branches": ["BASE TABLE"],
-        "cat_calendar": ["BASE TABLE"],
-        "cat_case_complexity": ["BASE TABLE"],
-        "cat_casetypes": ["BASE TABLE"],
-        "cat_categories": ["BASE TABLE"],
-        "cat_chartofaccounts": ["BASE TABLE"],
-        "cat_civilstatus": ["BASE TABLE"],
-        "cat_classifications": ["BASE TABLE"],
-        "cat_consentor": ["BASE TABLE"],
-        "cat_countries": ["BASE TABLE"],
-        "cat_court_documents": ["BASE TABLE"],
-        "cat_court_rules": ["BASE TABLE"],
-        "cat_court_rules_details": ["BASE TABLE"],
-        "cat_court_rules_packages": ["BASE TABLE"],
-        "cat_court_times": ["BASE TABLE"],
-        "cat_court_types": ["BASE TABLE"],
-        "cat_denominations": ["BASE TABLE"],
-        "cat_departments": ["BASE TABLE"],
-        "cat_deposit_types": ["BASE TABLE"],
-        "cat_designations": ["BASE TABLE"],
-        "cat_districts": ["BASE TABLE"],
-        "cat_document_types": ["BASE TABLE"],
-        "cat_email_recipients": ["BASE TABLE"],
-        "cat_enforcements": ["BASE TABLE"],
-        "cat_entitytypes": ["BASE TABLE"],
-        "cat_experience": ["BASE TABLE"],
-        "cat_facilities": ["BASE TABLE"],
-        "cat_functions": ["BASE TABLE"],
-        "cat_groupings": ["BASE TABLE"],
-        "cat_hearing_rules": ["BASE TABLE"],
-        "cat_hearingtypes": ["BASE TABLE"],
-        "cat_hours": ["BASE TABLE"],
-        "cat_item_classifications": ["BASE TABLE"],
-        "cat_judge_months": ["BASE TABLE"],
-        "cat_judges": ["BASE TABLE"],
-        "cat_judges_exemption": ["BASE TABLE"],
-        "cat_judges_shadow": ["BASE TABLE"],
-        "cat_judgment_delivery": ["BASE TABLE"],
-        "cat_judgment_disposal": ["BASE TABLE"],
-        "cat_judgment_types": ["BASE TABLE"],
-        "cat_jurisdictions": ["BASE TABLE"],
-        "cat_jury_exemptions": ["BASE TABLE"],
-        "cat_jury_speciality": ["BASE TABLE"],
-        "cat_languages": ["BASE TABLE"],
-        "cat_law_book": ["BASE TABLE"],
-        "cat_law_firms": ["BASE TABLE"],
-        "cat_marital_status": ["BASE TABLE"],
-        "cat_mediation_activity": ["BASE TABLE"],
-        "cat_milestones": ["BASE TABLE"],
-        "cat_notices_definitions": ["BASE TABLE"],
-        "cat_number_source": ["BASE TABLE"],
-        "cat_orders_details": ["BASE TABLE"],
-        "cat_outcomes": ["BASE TABLE"],
-        "cat_parties": ["BASE TABLE"],
-        "cat_pleas": ["BASE TABLE"],
-        "cat_police_stations": ["BASE TABLE"],
-        "cat_practiceareas": ["BASE TABLE"],
-        "cat_prerequisites": ["BASE TABLE"],
-        "cat_price_list": ["BASE TABLE"],
-        "cat_prisons": ["BASE TABLE"],
-        "cat_professions": ["BASE TABLE"],
-        "cat_public_holidays": ["BASE TABLE"],
-        "cat_reasons": ["BASE TABLE"],
-        "cat_receipt_formats": ["BASE TABLE"],
-        "cat_receipt_types": ["BASE TABLE"],
-        "cat_recesses": ["BASE TABLE"],
-        "cat_relationships": ["BASE TABLE"],
-        "cat_sections": ["BASE TABLE"],
-        "cat_sentence_types": ["BASE TABLE"],
-        "cat_sitting_types": ["BASE TABLE"],
-        "cat_stages": ["BASE TABLE"],
-        "cat_startupforms": ["BASE TABLE"],
-        "cat_sub_crimes": ["BASE TABLE"],
-        "cat_subnumber_types": ["BASE TABLE"],
-        "cat_subscriptions": ["BASE TABLE"],
-        "cat_void_reasons": ["BASE TABLE"],
-        "cat_warrant_types": ["BASE TABLE"],
-        "cat_weekdays": ["BASE TABLE"],
-        "cat_writstatus": ["BASE TABLE"],
-        "cat_years": ["BASE TABLE"],
-        "data_apostille_details": ["BASE TABLE"],
-        "data_apostilles": ["BASE TABLE"],
-        "data_apostilles_receipt": ["BASE TABLE"],
-        "data_appeals_cases": ["BASE TABLE"],
-        "data_appeals_details": ["BASE TABLE"],
-        "data_appeals_entities": ["BASE TABLE"],
-        "data_appeals_grounds": ["BASE TABLE"],
-        "data_appeals_hearings": ["BASE TABLE"],
-        "data_appeals_judges": ["BASE TABLE"],
-        "data_appeals_linkage": ["BASE TABLE"],
-        "data_appeals_matters": ["BASE TABLE"],
-        "data_attorney_practiceareas": ["BASE TABLE"],
-        "data_attorney_practiceareas_shadow": ["BASE TABLE"],
-        "data_attorney_schedule": ["BASE TABLE"],
-        "data_bail_conditions": ["BASE TABLE"],
-        "data_book_requests": ["BASE TABLE"],
-        "data_businesses": ["BASE TABLE"],
-        "data_case_adoptions": ["BASE TABLE"],
-        "data_case_batches": ["BASE TABLE"],
-        "data_case_overrides": ["BASE TABLE"],
-        "data_casefile_bail": ["BASE TABLE"],
-        "data_casefile_charges": ["BASE TABLE"],
-        "data_casefile_estates": ["BASE TABLE"],
-        "data_casefile_judgments": ["BASE TABLE"],
-        "data_casefile_reasons": ["BASE TABLE"],
-        "data_casefile_subnumbers": ["BASE TABLE"],
-        "data_casefiles": ["BASE TABLE"],
-        "data_casefiles_access": ["BASE TABLE"],
-        "data_casefiles_attorneys": ["BASE TABLE"],
-        "data_casefiles_divorces": ["BASE TABLE"],
-        "data_casefiles_entities": ["BASE TABLE"],
-        "data_casefiles_filer": ["BASE TABLE"],
-        "data_casefiles_hearings": ["BASE TABLE"],
-        "data_casefiles_indictments": ["BASE TABLE"],
-        "data_casefiles_orders": ["BASE TABLE"],
-        "data_casefiles_rubrics": ["BASE TABLE"],
-        "data_casefiles_sentences": ["BASE TABLE"],
-        "data_casefiles_status": ["BASE TABLE"],
-        "data_casefiles_sureties": ["BASE TABLE"],
-        "data_casefiles_writs": ["BASE TABLE"],
-        "data_casemanagement": ["BASE TABLE"],
-        "data_charge_counts": ["BASE TABLE"],
-        "data_classifications": ["BASE TABLE"],
-        "data_consolidations": ["BASE TABLE"],
-        "data_court_recesses": ["BASE TABLE"],
-        "data_court_rules": ["BASE TABLE"],
-        "data_court_sittings": ["BASE TABLE"],
-        "data_courtrooms": ["BASE TABLE"],
-        "data_criminal_items": ["BASE TABLE"],
-        "data_customers": ["BASE TABLE"],
-        "data_documents": ["BASE TABLE"],
-        "data_email_messages": ["BASE TABLE"],
-        "data_entities": ["BASE TABLE"],
-        "data_entity_charges": ["BASE TABLE"],
-        "data_error_tracker": ["BASE TABLE"],
-        "data_file_request": ["BASE TABLE"],
-        "data_hearings_details": ["BASE TABLE"],
-        "data_judge_absence": ["BASE TABLE"],
-        "data_judge_absence_details": ["BASE TABLE"],
-        "data_jury_candidates": ["BASE TABLE"],
-        "data_jury_request": ["BASE TABLE"],
-        "data_library": ["BASE TABLE"],
-        "data_library_accessions": ["BASE TABLE"],
-        "data_library_authors": ["BASE TABLE"],
-        "data_library_editors": ["BASE TABLE"],
-        "data_library_predefines": ["BASE TABLE"],
-        "data_library_publishers": ["BASE TABLE"],
-        "data_library_requests": ["BASE TABLE"],
-        "data_line_items": ["BASE TABLE"],
-        "data_marriage_licence": ["BASE TABLE"],
-        "data_marriage_officers": ["BASE TABLE"],
-        "data_mediation": ["BASE TABLE"],
-        "data_mediation_orders": ["BASE TABLE"],
-        "data_mediation_stages": ["BASE TABLE"],
-        "data_milestones": ["BASE TABLE"],
-        "data_notice_emails": ["BASE TABLE"],
-        "data_notices": ["BASE TABLE"],
-        "data_other_items": ["BASE TABLE"],
-        "data_reserve_judgment": ["BASE TABLE"],
-        "data_scanned_documents": ["BASE TABLE"],
-        "data_searches": ["BASE TABLE"],
-        "data_sequence_accounts": ["BASE TABLE"],
-        "data_sequence_actions": ["BASE TABLE"],
-        "data_sequence_apostille": ["BASE TABLE"],
-        "data_sequence_appeals": ["BASE TABLE"],
-        "data_sequence_appeals_civil": ["BASE TABLE"],
-        "data_sequence_appeals_criminal": ["BASE TABLE"],
-        "data_sequence_attorneys": ["BASE TABLE"],
-        "data_sequence_authors": ["BASE TABLE"],
-        "data_sequence_bail": ["BASE TABLE"],
-        "data_sequence_batch": ["BASE TABLE"],
-        "data_sequence_businesses": ["BASE TABLE"],
-        "data_sequence_cashbook": ["BASE TABLE"],
-        "data_sequence_categories": ["BASE TABLE"],
-        "data_sequence_claims": ["BASE TABLE"],
-        "data_sequence_consolidation": ["BASE TABLE"],
-        "data_sequence_criminal_appeal": ["BASE TABLE"],
-        "data_sequence_criminals": ["BASE TABLE"],
-        "data_sequence_customers": ["BASE TABLE"],
-        "data_sequence_deposits": ["BASE TABLE"],
-        "data_sequence_divorce": ["BASE TABLE"],
-        "data_sequence_documents": ["BASE TABLE"],
-        "data_sequence_editors": ["BASE TABLE"],
-        "data_sequence_entities": ["BASE TABLE"],
-        "data_sequence_entity_charges": ["BASE TABLE"],
-        "data_sequence_exemptions": ["BASE TABLE"],
-        "data_sequence_firms": ["BASE TABLE"],
-        "data_sequence_generic": ["BASE TABLE"],
-        "data_sequence_hearings": ["BASE TABLE"],
-        "data_sequence_invoices": ["BASE TABLE"],
-        "data_sequence_judges": ["BASE TABLE"],
-        "data_sequence_jury": ["BASE TABLE"],
-        "data_sequence_jury_request": ["BASE TABLE"],
-        "data_sequence_library": ["BASE TABLE"],
-        "data_sequence_licences": ["BASE TABLE"],
-        "data_sequence_marriage_officers": ["BASE TABLE"],
-        "data_sequence_marriages": ["BASE TABLE"],
-        "data_sequence_payins": ["BASE TABLE"],
-        "data_sequence_prices": ["BASE TABLE"],
-        "data_sequence_publishers": ["BASE TABLE"],
-        "data_sequence_receipts": ["BASE TABLE"],
-        "data_sequence_requests": ["BASE TABLE"],
-        "data_sequence_scanned": ["BASE TABLE"],
-        "data_sequence_sentences": ["BASE TABLE"],
-        "data_sequence_sittings": ["BASE TABLE"],
-        "data_sequence_summons": ["BASE TABLE"],
-        "data_sequence_tribunals": ["BASE TABLE"],
-        "data_sequence_trust": ["BASE TABLE"],
-        "data_sequence_vsurequest": ["BASE TABLE"],
-        "data_sequence_warrants": ["BASE TABLE"],
-        "data_sequence_writs": ["BASE TABLE"],
-        "data_sittings_candidate": ["BASE TABLE"],
-        "data_sms_text": ["BASE TABLE"],
-        "data_stenography": ["BASE TABLE"],
-        "data_vsu_items": ["BASE TABLE"],
-        "data_vsurequests": ["BASE TABLE"],
-        "data_warrants": ["BASE TABLE"],
-        "defaultvalues": ["BASE TABLE"],
-        "lawyers": ["BASE TABLE"],
-        "security_districts": ["BASE TABLE"],
-        "security_groupdefinition": ["BASE TABLE"],
-        "security_logins": ["BASE TABLE"],
-        "security_modules": ["BASE TABLE"],
-        "security_officers": ["BASE TABLE"],
-        "security_pages": ["BASE TABLE"],
-        "security_printer_bins": ["BASE TABLE"],
-        "security_printers": ["BASE TABLE"],
-        "security_rights": ["BASE TABLE"],
-        "security_workstations": ["BASE TABLE"],
-        "sequence_cat_hearings": ["BASE TABLE"],
-        "sequence_rules": ["BASE TABLE"],
-        "shadow_entities": ["BASE TABLE"],
-        "temp_appeals_grounds": ["BASE TABLE"],
-        "temp_case_charges": ["BASE TABLE"],
-        "temp_case_parties": ["BASE TABLE"],
-        "temp_clearance_rate": ["BASE TABLE"],
-        "temp_disposition": ["BASE TABLE"],
-        "temp_dispositions": ["BASE TABLE"],
-        "temp_entity_charges": ["BASE TABLE"],
-        "temp_marriages": ["BASE TABLE"],
-        "temp_payin": ["BASE TABLE"],
-        "temp_reports": ["BASE TABLE"],
-        "temp_scanning_data": ["BASE TABLE"],
-        "temp_strings": ["BASE TABLE"],
-        "view_appeals_judge": ["BASE TABLE"],
-        "view_appeals_lawfirms_emailaddresses": ["BASE TABLE"],
-        "view_appeals_parties": ["BASE TABLE"],
-        "view_attorney_notice": ["BASE TABLE"],
-        "view_attorneyactivecasecount": ["BASE TABLE"],
-        "view_batch_details": ["BASE TABLE"],
-        "view_case_calendars": ["BASE TABLE"],
-        "view_case_charges": ["BASE TABLE"],
-        "view_case_judges": ["BASE TABLE"],
-        "view_case_lawfirms": ["BASE TABLE"],
-        "view_case_lawfirms_calendar": ["BASE TABLE"],
-        "view_case_lawfirms_emailaddresses": ["BASE TABLE"],
-        "view_case_lawyers": ["BASE TABLE"],
-        "view_case_lawyers_report": ["BASE TABLE"],
-        "view_case_mediation": ["BASE TABLE"],
-        "view_case_orders": ["BASE TABLE"],
-        "view_case_parties": ["BASE TABLE"],
-        "view_case_processes": ["BASE TABLE"],
-        "view_case_witnesses": ["BASE TABLE"],
-        "view_casefile_hearings": ["BASE TABLE"],
-        "view_casefile_hearings2": ["BASE TABLE"],
-        "view_casefile_judgements": ["BASE TABLE"],
-        "view_casefiles_writs": ["BASE TABLE"],
-        "view_casemanagement_ready": ["BASE TABLE"],
-        "view_casereports": ["BASE TABLE"],
-        "view_cases_assigned": ["BASE TABLE"],
-        "view_cash_breakdown": ["BASE TABLE"],
-        "view_cashbook_direct_deposits": ["BASE TABLE"],
-        "view_cashbook_journal": ["BASE TABLE"],
-        "view_cashbook_paymentmodes": ["BASE TABLE"],
-        "view_charges_entities": ["BASE TABLE"],
-        "view_chartofaccounts": ["BASE TABLE"],
-        "view_court_districts": ["BASE TABLE"],
-        "view_court_rules": ["BASE TABLE"],
-        "view_current_adjournments": ["BASE TABLE"],
-        "view_customer_info": ["BASE TABLE"],
-        "view_customer_transactions": ["BASE TABLE"],
-        "view_data_casefiles_filer": ["BASE TABLE"],
-        "view_data_sentences": ["BASE TABLE"],
-        "view_direct_deposit_payments": ["BASE TABLE"],
-        "view_entity_names": ["BASE TABLE"],
-        "view_hearing_counts": ["BASE TABLE"],
-        "view_hearing_statistics": ["BASE TABLE"],
-        "view_hearings": ["BASE TABLE"],
-        "view_incomplete_cases": ["BASE TABLE"],
-        "view_invoice_details": ["BASE TABLE"],
-        "view_invoice_items": ["BASE TABLE"],
-        "view_judge_assignments": ["BASE TABLE"],
-        "view_jury_candidates": ["BASE TABLE"],
-        "view_marriage_licence": ["BASE TABLE"],
-        "view_marriage_line_items": ["BASE TABLE"],
-        "view_outstanding_hearings": ["BASE TABLE"],
-        "view_party_type_count": ["BASE TABLE"],
-        "view_payin_summary": ["BASE TABLE"],
-        "view_paying_in": ["BASE TABLE"],
-        "view_payment_mode_by_session": ["BASE TABLE"],
-        "view_payment_receipt": ["BASE TABLE"],
-        "view_posted_sessions": ["BASE TABLE"],
-        "view_professional_listing": ["BASE TABLE"],
-        "view_scanned_images": ["BASE TABLE"],
-        "view_session_summaries": ["BASE TABLE"],
-        "view_temp_calendar": ["BASE TABLE"],
-        "view_unacknowledged_cases": ["BASE TABLE"],
-        "view_unverified_transactions": ["BASE TABLE"],
-        "attorney_admissions_view": ["VIEW"],
-        "attorneys_view": ["VIEW"],
-        "case_attorney_view": ["VIEW"],
-        "case_lawfirm_view": ["VIEW"],
-        "case_search_view": ["VIEW"],
-        "defendants_view": ["VIEW"],
-        "jury_request_view": ["VIEW"],
-        "report_ccj_view": ["VIEW"],
-        "view_account_balance": ["VIEW"],
-        "view_accounting_codes": ["VIEW"],
-        "view_accts_receipts": ["VIEW"],
-        "view_accts_revenue_breakdown": ["VIEW"],
-        "view_aging_query": ["VIEW"],
-        "view_aging_records": ["VIEW"],
-        "view_aging_years": ["VIEW"],
-        "view_annual_billing_list": ["VIEW"],
-        "view_apostille_line_items": ["VIEW"],
-        "view_apostilles": ["VIEW"],
-        "view_appeals_calendars": ["VIEW"],
-        "view_appeals_calendars_panel": ["VIEW"],
-        "view_appeals_cases": ["VIEW"]
-      });
-      return;
-    }
-
-    setIsConnecting(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/schema', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(creds),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to connect to database');
-      }
-
-      setCredentials(creds);
-      setSchemaContext(data.schema);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsConnecting(false);
-    }
+  const handleSelectCase = (claimNumber: string) => {
+    setSelectedCase(claimNumber);
+    setActivePage('dashboard');
   };
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex items-center justify-center p-4">
-      {!credentials ? (
-        <div className="w-full max-w-md flex flex-col items-center">
-          <div className="mb-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 border border-emerald-500/20">
-              <Database className="w-8 h-8 text-emerald-400" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">MySQL Chatbot</h1>
-            <p className="text-zinc-400 text-sm">Connect to your database to start querying with natural language.</p>
-          </div>
-          
-          {error && (
-            <div className="w-full mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400 text-sm">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <p>{error}</p>
-            </div>
-          )}
+  useEffect(() => {
+    const attemptAutoConnection = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/schema', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Connection failed.');
+        setCredentials({ status: 'connected', database: data.database || 'Connected' });
+        setSchemaContext(data.schema);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    attemptAutoConnection();
+  }, []);
 
-          {isConnecting ? (
-            <div className="w-full bg-zinc-900 p-8 rounded-2xl border border-zinc-800 flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-              <p className="text-zinc-400 font-medium">Connecting & fetching schema...</p>
-            </div>
-          ) : (
-            <ConnectionSettings onSave={handleConnect} />
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center">
+          <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mb-4" />
+          <p className="text-zinc-400 animate-pulse">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
+        <div className="text-center p-8 bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h1 className="text-xl font-bold mb-2">System Error</h1>
+          <p className="text-zinc-400 text-sm mb-6">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-all">Retry Connection</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-zinc-950 text-zinc-100 overflow-hidden flex flex-col relative">
+      {/* Top Global Header */}
+      <header className="h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-900/50 backdrop-blur-md shrink-0 z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <Database className="w-5 h-5 text-white" />
+          </div>
+          <h1 className="font-black text-lg tracking-tighter uppercase">Judicial Workspace</h1>
+        </div>
+        <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+          <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1">
+            <button onClick={() => setActivePage('dashboard')} className={`px-2 py-1 rounded text-[10px] ${activePage === 'dashboard' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'}`}>Dashboard</button>
+            <button onClick={() => setActivePage('calendar')} className={`px-2 py-1 rounded text-[10px] ${activePage === 'calendar' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'}`}>Calendar</button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            Live Records
+          </div>
+          <div className="h-4 w-[1px] bg-zinc-800"></div>
+          <span>Live Context</span>
+        </div>
+      </header>
+
+      {/* Main Content: Full Screen Dashboard */}
+      <main className="flex-1 overflow-hidden p-6 relative">
+        {activePage === 'dashboard' ? (
+          <Dashboard credentials={credentials} initialCaseNumber={selectedCase} onCaseCleared={() => setSelectedCase(null)} />
+        ) : (
+          <CalendarPage credentials={credentials} onSelectCase={handleSelectCase} />
+        )}
+      </main>
+
+      {/* Floating Chat Interface */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+        <AnimatePresence>
+          {isChatOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20, transformOrigin: 'bottom right' }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-[450px] h-[600px] bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] flex flex-col"
+            >
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Assistant Chat</h2>
+                </div>
+                <button 
+                  onClick={() => setIsChatOpen(false)}
+                  className="p-1 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ChatInterface
+                  credentials={credentials}
+                  schemaContext={schemaContext}
+                  uiContext={{
+                    activePage,
+                    chatOpen: isChatOpen,
+                    navigation: ['dashboard', 'calendar'],
+                    pageCapabilities: getPageCapabilities(activePage),
+                  }}
+                />
+              </div>
+            </motion.div>
           )}
-        </div>
-      ) : (
-        <div className="w-full max-w-5xl h-[85vh]">
-          <ChatInterface credentials={credentials} schemaContext={schemaContext} />
-        </div>
-      )}
+        </AnimatePresence>
+
+        {/* The Bubble Button */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-colors ${
+            isChatOpen ? 'bg-zinc-800 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-400'
+          }`}
+        >
+          {isChatOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+        </motion.button>
+      </div>
     </div>
   );
 }

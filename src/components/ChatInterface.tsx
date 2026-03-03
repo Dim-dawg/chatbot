@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Database, Loader2, Code } from 'lucide-react';
 
-export default function ChatInterface({ credentials, schemaContext }: any) {
+export default function ChatInterface({ credentials, schemaContext, uiContext }: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +32,14 @@ export default function ChatInterface({ credentials, schemaContext }: any) {
           message: userMsg,
           credentials,
           schemaContext,
+          uiContext: {
+            ...(uiContext || {}),
+            viewport: {
+              width: typeof window !== 'undefined' ? window.innerWidth : null,
+              height: typeof window !== 'undefined' ? window.innerHeight : null,
+            },
+            sent_at: new Date().toISOString(),
+          },
           history: messages,
         }),
       });
@@ -49,6 +57,9 @@ export default function ChatInterface({ credentials, schemaContext }: any) {
           content: data.reply,
           sql: data.sql,
           data: data.data,
+          action: data.action,
+          success: data.success,
+          multi_step: data.multi_step,
         },
       ]);
     } catch (error: any) {
@@ -115,6 +126,14 @@ export default function ChatInterface({ credentials, schemaContext }: any) {
                   </pre>
                 </div>
               )}
+
+              {!msg.multi_step && (msg.action || typeof msg.success === 'boolean') && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 w-full">
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-wider">
+                    {msg.action ? `Action: ${msg.action}` : 'Query'} | {msg.success ? 'Success' : 'No changes'}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -156,3 +175,6 @@ export default function ChatInterface({ credentials, schemaContext }: any) {
     </div>
   );
 }
+
+
+
