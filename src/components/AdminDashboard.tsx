@@ -73,6 +73,12 @@ export default function AdminDashboard({ credentials, onRefreshSchema }: AdminDa
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [orphanCheckResult, setOrphanCheckResult] = useState<string | null>(null);
+  const [vaultSizeResult, setVaultSizeResult] = useState<string | null>(null);
+  const [orphanCheckLoading, setOrphanCheckLoading] = useState(false);
+  const [vaultSizeLoading, setVaultSizeLoading] = useState(false);
+  const [maintenanceError, setMaintenanceError] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<'users' | 'logs' | 'health' | 'maintenance' | 'connection'>('users');
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -181,6 +187,38 @@ export default function AdminDashboard({ credentials, onRefreshSchema }: AdminDa
       setError(err.message);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleOrphanCheck = async () => {
+    setOrphanCheckLoading(true);
+    setMaintenanceError(null);
+    setOrphanCheckResult(null);
+    try {
+      const res = await fetch('/api/admin/maintenance/scan-orphans', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Orphan scan failed.');
+      setOrphanCheckResult(data.message);
+    } catch (err: any) {
+      setMaintenanceError(err.message);
+    } finally {
+      setOrphanCheckLoading(false);
+    }
+  };
+
+  const handleVaultSize = async () => {
+    setVaultSizeLoading(true);
+    setMaintenanceError(null);
+    setVaultSizeResult(null);
+    try {
+      const res = await fetch('/api/admin/maintenance/vault-size', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Vault size calculation failed.');
+      setVaultSizeResult(data.message);
+    } catch (err: any) {
+      setMaintenanceError(err.message);
+    } finally {
+      setVaultSizeLoading(false);
     }
   };
 
@@ -490,16 +528,28 @@ export default function AdminDashboard({ credentials, onRefreshSchema }: AdminDa
                   <p className="text-zinc-500 text-xs">Manage encrypted binary storage and identify orphan files.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-zinc-800 p-6 rounded-2xl space-y-3">
-                  <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest">Orphan Check</h4>
-                  <p className="text-xs text-zinc-600 italic">Identifies files in the vault that are not referenced in the database.</p>
-                  <button className="text-[10px] font-bold text-blue-400 uppercase tracking-widest hover:underline">Scan Vault</button>
+              {maintenanceError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-300 text-xs">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  {maintenanceError}
                 </div>
-                <div className="border border-zinc-800 p-6 rounded-2xl space-y-3">
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border border-zinc-800 p-6 rounded-2xl space-y-3 flex flex-col">
+                  <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest">Orphan Check</h4>
+                  <p className="text-xs text-zinc-600 italic flex-grow">Identifies files in the vault that are not referenced in the database.</p>
+                  <button onClick={handleOrphanCheck} disabled={orphanCheckLoading} className="text-[10px] font-bold text-blue-400 uppercase tracking-widest hover:underline disabled:opacity-50 disabled:cursor-wait flex items-center gap-2">
+                    {orphanCheckLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Scanning...</> : 'Scan Vault'}
+                  </button>
+                  {orphanCheckResult && <p className="text-xs text-emerald-400 font-mono mt-2">{orphanCheckResult}</p>}
+                </div>
+                <div className="border border-zinc-800 p-6 rounded-2xl space-y-3 flex flex-col">
                   <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest">Storage Status</h4>
-                  <p className="text-xs text-zinc-600 italic">Calculates total encrypted storage volume on disk.</p>
-                  <button className="text-[10px] font-bold text-blue-400 uppercase tracking-widest hover:underline">Calculate Size</button>
+                  <p className="text-xs text-zinc-600 italic flex-grow">Calculates total encrypted storage volume on disk.</p>
+                  <button onClick={handleVaultSize} disabled={vaultSizeLoading} className="text-[10px] font-bold text-blue-400 uppercase tracking-widest hover:underline disabled:opacity-50 disabled:cursor-wait flex items-center gap-2">
+                    {vaultSizeLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Calculating...</> : 'Calculate Size'}
+                  </button>
+                  {vaultSizeResult && <p className="text-xs text-emerald-400 font-mono mt-2">{vaultSizeResult}</p>}
                 </div>
               </div>
             </div>

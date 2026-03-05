@@ -2,7 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
-import { appendFile, mkdir, readFile, writeFile } from "fs/promises";
+import { appendFile, mkdir, readFile, writeFile, readdir, stat } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { exec } from "child_process";
@@ -1502,6 +1502,49 @@ Action Status: ${actionSuccess ? "Success" : "None"}
       await auditLog(user.sub, "ADMIN_CLEAR_CACHE", "system", "semantic_chunks");
       res.json({ success: true, message: "Relational mapping cleared. FAISS index will be overwritten on next re-index." });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/admin/maintenance/scan-orphans", async (req, res) => {
+    const user = (req as any).authUser;
+    if (user?.role !== 'admin') return res.status(403).json({ error: "Admin access required." });
+
+    const vaultDir = path.join(process.cwd(), "backend", "data", "vault");
+    try {
+      const conn = await getDbConnection();
+      const [dbFiles] = await conn.execute("SELECT storage_path FROM data_scanned_documents");
+      await conn.end();
+
+      const referencedFiles = new Set((dbFiles as any[]).map(f => path.basename(f.storage_path)));
+      const diskFiles = await mkdir(vaultDir, { recursive: true }).then(() => readdir(vaultDir));
+
+      const orphans = diskFiles.filter(f => !referencedFiles.has(f));
+      
+      await auditLog(user.sub, "ADMIN_SCAN_ORPHANS", "system", "vault", { found: orphans.length });
+      res.json({ success: true, message: `Found ${orphans.length} orphan file(s).` });
+    } catch (err: any) {
+      res.status(500).json({ error: `Orphan scan failed: ${err.message}` });
+    }
+  });
+
+  app.post("/api/admin/maintenance/vault-size", async (req, res) => {
+    const user = (req as any).authUser;
+    if (user?.role !== 'admin') return res.status(403).json({ error: "Admin access required." });
+    
+    const vaultDir = path.join(process.cwd(), "backend", "data", "vault");
+    try {
+      const files = await mkdir(vaultDir, { recursive: true }).then(() => readdir(vaultDir));
+      let totalSize = 0;
+      for (const file of files) {
+        const stats = await stat(path.join(vaultDir, file));
+        totalSize += stats.size;
+      }
+      
+      const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+      await auditLog(user.sub, "ADMIN_CALCULATE_VAULT_SIZE", "system", "vault", { size_mb: sizeMB });
+      res.json({ success: true, message: `Vault size is ${sizeMB} MB.` });
+    } catch (err: any) {
+      res.status(500).json({ error: `Vault size calculation failed: ${err.message}` });
+    }
   });
 
   if (process.env.NODE_ENV !== "production") {

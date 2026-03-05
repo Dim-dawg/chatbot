@@ -28,7 +28,7 @@ def ingest():
         for i, case in enumerate(cases):
             payload = {
                 "claim_number": case["claim_number"],
-                "summary": case["CaseSummary"]
+                "text": case["CaseSummary"]
             }
             res = requests.post(VECTOR_SERVICE_URL, json=payload)
             if res.status_code == 200:
