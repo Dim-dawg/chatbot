@@ -57,27 +57,27 @@ export default function App() {
     setActivePage('dashboard');
   };
 
-  useEffect(() => {
-    const loadSchema = async () => {
-      setAuthLoading(true);
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await fetch('/api/schema', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Connection failed.');
-        setCredentials({ status: 'connected', database: data.database || 'Connected' });
-        setSchemaContext(data.schema);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadSchema = async () => {
+    setAuthLoading(true);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/schema', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Connection failed.');
+      setCredentials({ status: 'connected', database: data.database || 'Connected' });
+      setSchemaContext(data.schema);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     const init = async () => {
       setAuthLoading(true);
       try {
