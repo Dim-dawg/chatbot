@@ -3,7 +3,7 @@
 ## 1. Backend Service (Node.js)
 - **Runtime**: Node.js v18+
 - **Database Driver**: `mysql2/promise` for asynchronous SQL operations.
-- **AI Orchestration**: Direct fetch calls to local Ollama API (`/api/generate`).
+- **AI Orchestration**: Direct `fetch` calls to the external Mistral AI API (`https://api.mistral.ai/v1/chat/completions`).
 - **Development Tool**: `tsx` for running TypeScript server directly.
 
 ## 2. Frontend Application (React)
@@ -19,9 +19,10 @@
 - **Logic**: Maps FAISS internal IDs to MySQL `claim_number`.
 - **Port**: Default 8000.
 
-## 4. AI Models (Ollama)
-- **Reasoning**: `lexivault-deepseek-r1:latest`
-- **Embeddings**: `mistral:latest`
+## 4. AI Models & Services
+- **Reasoning**: `mistral-large-latest` (via Mistral AI API).
+- **Embeddings**: `mistral:latest` (via local Ollama instance).
+- **Logging**: `llama3.1:8b` (via local Ollama instance).
 - **PDF Extraction**: Managed via Python `PyPDF2` or similar (in development).
 
 ## 5. Performance Targets

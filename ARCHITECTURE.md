@@ -14,18 +14,18 @@
 
 ## 3. Data & Intelligence Layer
 - **Relational (MySQL)**: Stores all metadata, case files, and procedural notes. Powers the dashboard views.
-- **Vector (FAISS)**: A secondary Python-based service that provides semantic search through case summaries.
-- **AI (Ollama)**: Local LLM engine.
-    - **DeepSeek-R1**: Used for natural language reasoning and SQL generation.
-    - **Mistral**: Used for generating vector embeddings from text and PDFs.
+- **Vector (FAISS)**: A secondary Python-based service that provides semantic search through case summaries, powered by a local Ollama embedding model.
+- **AI Engines**:
+    - **Mistral AI (Cloud)**: Used for natural language reasoning and SQL generation via its external API.
+    - **Ollama (Local)**: Used for generating vector embeddings (`mistral:latest`) and for an internal logging analysis service (`llama3.1:8b`).
 
 ## 4. Key Workflows
 ### A. Conversational Query
 1. User types in Chat Widget.
-2. Node.js backend sends query + filtered schema to Ollama.
-3. Ollama returns SQL or Action intent.
+2. Node.js backend sends query + filtered schema to the Mistral AI API.
+3. Mistral AI returns SQL or Action intent.
 4. Node.js executes SQL against MySQL and retrieves data.
-5. Ollama summarizes the data into a professional reply.
+5. Mistral AI summarizes the data into a professional reply.
 
 ### B. Dashboard Visualization
 1. On load, React calls custom Dashboard APIs.

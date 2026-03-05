@@ -14,10 +14,10 @@ Follow these steps to set up "The chatbot" for local development.
 3. Ensure the `ai_` prefixed views are created (see `DATABASE_DOCS.md`).
 
 ## 3. Ollama Setup
-Download the required models:
+Download the models required for local embeddings and logging services:
 ```bash
-ollama pull lexivault-deepseek-r1:latest
 ollama pull mistral:latest
+ollama pull llama3.1:8b
 ```
 
 ## 4. Backend & Frontend Setup
@@ -26,8 +26,21 @@ ollama pull mistral:latest
 npm install
 
 # Create environment file
+# In Windows Command Prompt:
+type nul > .env
+# In PowerShell or Git Bash:
 touch .env
-# Fill .env with your MySQL credentials (see CONFIGURATION_GUIDE.md)
+
+# Fill .env with your MySQL and Mistral AI credentials (see CONFIGURATION_GUIDE.md)
+# Your .env file should look like this:
+#
+# MYSQL_HOST=localhost
+# MYSQL_PORT=3306
+# MYSQL_USER=your_user
+# MYSQL_PASSWORD=your_pass
+# MYSQL_DATABASE=casemanager
+# MISTRAL_API_KEY="your_mistral_api_key"
+#
 
 # Start development server
 npm run dev

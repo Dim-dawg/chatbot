@@ -13,7 +13,7 @@ All notable changes to "The chatbot" will be documented in this file.
 - **Stored Procedures**: `sp_finalize_case` for atomic database updates.
 
 ### Changed
-- Refactored AI engine to use Ollama (`lexivault-deepseek-r1:latest`).
+- **AI Engine Overhaul**: Replaced the local Ollama reasoning model (`lexivault-deepseek-r1`) with the external Mistral AI API (`mistral-large-latest`) for improved performance and accuracy in chat and intent detection.
 - Redesigned Dashboard using high-performance custom SVG charts.
 - Optimized database layer with dynamic views (`ai_` prefixed).
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Loader2, FileText, ChevronRight, Clock, MapPin, User2 } from 'lucide-react';
+import { CalendarDays, Loader2, FileText, ChevronRight, Clock, MapPin, User2, Search, X } from 'lucide-react';
 
 export default function CalendarPage({ credentials, onSelectCase }: any) {
   const today = new Date().toISOString().slice(0, 10);
@@ -7,6 +7,7 @@ export default function CalendarPage({ credentials, onSelectCase }: any) {
 
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(plus14);
+  const [searchQuery, setSearchQuery] = useState('');
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,20 +36,31 @@ export default function CalendarPage({ credentials, onSelectCase }: any) {
     fetchSchedules();
   }, [credentials]);
 
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return rows;
+    const q = searchQuery.toLowerCase();
+    return rows.filter(r => 
+      (r.casename || '').toLowerCase().includes(q) ||
+      (r.claim_number || '').toLowerCase().includes(q) ||
+      (r.party_names || '').toLowerCase().includes(q) ||
+      (r.judge_name || '').toLowerCase().includes(q)
+    );
+  }, [rows, searchQuery]);
+
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
-    for (const r of rows) {
+    for (const r of filteredRows) {
       const d = new Date(r.assigned_start_date).toISOString().slice(0, 10);
       if (!map[d]) map[d] = [];
       map[d].push(r);
     }
     return map;
-  }, [rows]);
+  }, [filteredRows]);
 
   return (
     <div className="h-full overflow-y-auto pr-2 custom-scrollbar space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-zinc-800 pb-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.1)]">
             <CalendarDays className="w-6 h-6 text-emerald-400" />
@@ -58,34 +70,60 @@ export default function CalendarPage({ credentials, onSelectCase }: any) {
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-[0.2em]">Scheduled Hearings & Mentions</p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3 bg-zinc-900/50 p-2 rounded-2xl border border-zinc-800">
-          <div className="flex flex-col">
-            <label className="text-[9px] text-zinc-500 uppercase font-black px-2 mb-1">From</label>
+
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          {/* Search Bar */}
+          <div className="relative group w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-400 transition-colors" />
             <input 
-              type="date" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)} 
-              className="bg-transparent text-zinc-200 text-xs px-2 outline-none" 
+              type="text"
+              placeholder="Filter by name, claim, or party..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-10 py-2.5 text-xs text-zinc-200 outline-none focus:border-emerald-500/50 transition-all"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-white"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
-          <div className="w-px h-8 bg-zinc-800"></div>
-          <div className="flex flex-col">
-            <label className="text-[9px] text-zinc-500 uppercase font-black px-2 mb-1">To</label>
-            <input 
-              type="date" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)} 
-              className="bg-transparent text-zinc-200 text-xs px-2 outline-none" 
-            />
+          
+          <div className="flex items-center gap-3 bg-zinc-900/50 p-2 rounded-2xl border border-zinc-800 w-full md:w-auto">
+            <div className="flex flex-col">
+              <label className="text-[9px] text-zinc-500 uppercase font-black px-2 mb-1">From</label>
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent text-zinc-200 text-xs px-2 outline-none" 
+              />
+            </div>
+            <div className="w-px h-8 bg-zinc-800"></div>
+            <div className="flex flex-col">
+              <label className="text-[9px] text-zinc-500 uppercase font-black px-2 mb-1">To</label>
+              <input 
+                type="date" 
+                value={endDate} 
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent text-zinc-200 text-xs px-2 outline-none" 
+              />
+            </div>
+            <button 
+              onClick={fetchSchedules} 
+              className="ml-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+            >
+              Refresh
+            </button>
           </div>
-          <button 
-            onClick={fetchSchedules} 
-            className="ml-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20"
-          >
-            Refresh
-          </button>
         </div>
+      </div>
+
+      <div className="text-[11px] text-zinc-500">
+        Selected range: <span className="text-zinc-300">{startDate}</span> to <span className="text-zinc-300">{endDate}</span>
       </div>
 
       {loading ? (
@@ -98,10 +136,13 @@ export default function CalendarPage({ credentials, onSelectCase }: any) {
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
           {error}
         </div>
-      ) : Object.keys(grouped).length === 0 ? (
+      ) : filteredRows.length === 0 ? (
         <div className="h-64 flex flex-col items-center justify-center text-zinc-500 space-y-2">
-          <CalendarDays className="w-12 h-12 opacity-20" />
-          <p className="text-sm font-bold uppercase tracking-widest">No hearings scheduled for this period.</p>
+          <Search className="w-12 h-12 opacity-20" />
+          <p className="text-sm font-bold uppercase tracking-widest">{searchQuery ? 'No matching hearings found.' : 'No hearings scheduled for this period.'}</p>
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mt-2">Clear Search</button>
+          )}
         </div>
       ) : (
         <div className="space-y-10">
@@ -183,4 +224,3 @@ export default function CalendarPage({ credentials, onSelectCase }: any) {
     </div>
   );
 }
-
