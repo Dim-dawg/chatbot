@@ -337,6 +337,14 @@ export default function AdminDashboard({ credentials, onRefreshSchema }: AdminDa
                             <option value="judge">Presiding Judge</option>
                             <option value="clerk">Legal Clerk</option>
                             <option value="staff">Administrative Staff</option>
+                            <option value="attorney">Legal Counsel / Attorney</option>
+                            <option value="public">General Public</option>
+                            <option value="CASHIER">Court Cashier</option>
+                            <option value="MARSHALLS">Judge's Marshall</option>
+                            <option value="CHIEF JUSTICE">Chief Justice</option>
+                            <option value="REGISTRAR">Registrar General</option>
+                            <option value="STENOGRAPHERS">Court Stenographer</option>
+                            <option value="VAULT SEARCH">Vault Search Clerk</option>
                           </select>
                         </td>
                         <td className="px-6 py-4 text-[10px] text-zinc-500 font-mono">
@@ -350,8 +358,7 @@ export default function AdminDashboard({ credentials, onRefreshSchema }: AdminDa
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </td>
-                      </tr>
+                        </td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -420,8 +427,7 @@ export default function AdminDashboard({ credentials, onRefreshSchema }: AdminDa
                           <div className="max-w-xs truncate text-[10px] text-zinc-600 font-mono italic" title={l.details}>
                             {l.details || '-'}
                           </div>
-                        </td>
-                      </tr>
+                        </td></tr>
                     ))}
                   </tbody>
                 </table>

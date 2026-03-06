@@ -1,8 +1,8 @@
 # Decision Log
 
-## [2024-10-24] - Naming
-**Decision**: Use "The chatbot" as the primary application name.
-**Rationale**: Simplicity and clarity for non-technical judicial users.
+## [2026-03-06] - Rebranding
+**Decision**: Standardize on the name "LexiVault".
+**Rationale**: Professional identity suitable for a high-security judicial platform.
 
 ## [2024-10-24] - UI Layout
 **Decision**: Single-page Command Center with Sidebar Chat Widget and Full-screen Dashboard.

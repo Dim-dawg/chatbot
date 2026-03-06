@@ -37,9 +37,10 @@ interface DashboardProps {
   credentials: any;
   initialCaseNumber?: string | null;
   onCaseCleared?: () => void;
+  permissions?: string[];
 }
 
-export default function Dashboard({ credentials, initialCaseNumber, onCaseCleared }: DashboardProps) {
+export default function Dashboard({ credentials, initialCaseNumber, onCaseCleared, permissions = [] }: DashboardProps) {
   const [summary, setSummary] = useState<any>(null);
   const [hearings, setHearings] = useState<any[]>([]);
   const [judgments, setJudgments] = useState<any[]>([]);
@@ -406,7 +407,7 @@ export default function Dashboard({ credentials, initialCaseNumber, onCaseCleare
               <h3 className="text-sm font-bold text-white uppercase tracking-widest opacity-70">Monthly Inflow Trend</h3>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 h-[320px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={240}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={240} debounce={100}>
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
@@ -459,7 +460,7 @@ export default function Dashboard({ credentials, initialCaseNumber, onCaseCleare
               {caseloadPieData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-zinc-600 text-xs italic">No pie data.</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={260} minHeight={220}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={260} minHeight={220} debounce={100}>
                   <PieChart>
                     <Pie
                       data={caseloadPieData}
@@ -524,7 +525,7 @@ export default function Dashboard({ credentials, initialCaseNumber, onCaseCleare
               {outcomesPieData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-zinc-600 text-xs italic">No outcome data.</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={260} minHeight={220}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={260} minHeight={220} debounce={100}>
                   <PieChart>
                     <Pie
                       data={outcomesPieData}
@@ -599,12 +600,11 @@ export default function Dashboard({ credentials, initialCaseNumber, onCaseCleare
                 <td className="px-6 py-4"><span className="text-[10px] font-bold bg-zinc-800 text-zinc-400 px-2 py-1 rounded-lg border border-zinc-700 uppercase">{h.hearing_type}</span></td>
                 <td className="px-6 py-4 text-center"><div className="text-sm text-zinc-200 font-bold">{new Date(h.assigned_start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div><div className="text-[10px] text-zinc-500">{h.start_time}</div></td>
                 <td className="px-6 py-4 text-emerald-400 text-xs font-bold uppercase">{h.judge_name || 'UNASSIGNED'}</td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-right">{permissions.includes('APPROVE_CASE') && (
                   <button onClick={() => handleFinalize(h.claim_number)} disabled={loadingFinalize === h.claim_number} className="px-4 py-2 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white text-emerald-400 text-[10px] font-bold rounded-xl transition-all disabled:opacity-50 uppercase tracking-widest">
                     {loadingFinalize === h.claim_number ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Finalize'}
                   </button>
-                </td>
-              </tr>
+                )}</td></tr>
             )}
           />
         </section>

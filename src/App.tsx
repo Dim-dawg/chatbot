@@ -3,10 +3,11 @@ import ChatInterface from './components/ChatInterface';
 import Dashboard from './components/Dashboard';
 import CalendarPage from './components/CalendarPage';
 import AdminDashboard from './components/AdminDashboard';
-import { Database, Loader2, AlertCircle, MessageSquare, X, Lock, LogOut, ShieldCheck } from 'lucide-react';
+import ManagementDashboard from './components/ManagementDashboard';
+import { Database, Loader2, AlertCircle, MessageSquare, X, Lock, LogOut, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-function getPageCapabilities(page: 'dashboard' | 'calendar') {
+function getPageCapabilities(page: 'dashboard' | 'calendar' | 'management') {
   if (page === 'calendar') {
     return {
       page: 'calendar',
@@ -18,6 +19,20 @@ function getPageCapabilities(page: 'dashboard' | 'calendar') {
       ],
       dataViews: ['Daily schedule list with case, hearing type, time, and judge'],
       actions: ['Change date range', 'Refresh schedules'],
+    };
+  }
+
+  if (page === 'management') {
+    return {
+      page: 'management',
+      title: 'Management Oversight',
+      canDo: [
+        'Monitor judge workloads and hearing counts',
+        'Analyze total assigned vs open caseloads',
+        'Perform administrative bulk closure of stale cases',
+      ],
+      dataViews: ['Judge workload table', 'Load status indicators', 'Stale case resolution tool'],
+      actions: ['Refresh workload stats', 'Execute bulk case closure'],
     };
   }
 
@@ -41,6 +56,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authUser, setAuthUser] = useState<string>('');
   const [userRole, setUserRole] = useState<string>('clerk');
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -66,6 +82,10 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
+      if (response.status === 401) {
+        setIsAuthenticated(false);
+        return;
+      }
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Connection failed.');
       setCredentials({ status: 'connected', database: data.database || 'Connected' });
@@ -94,6 +114,7 @@ export default function App() {
         setIsAuthenticated(true);
         setAuthUser(String(authData?.user?.username || ''));
         setUserRole(String(authData?.user?.role || 'clerk'));
+        setUserPermissions(authData?.user?.permissions || []);
         await loadSchema();
       } catch {
         setIsAuthenticated(false);
@@ -118,6 +139,7 @@ export default function App() {
       setIsAuthenticated(true);
       setAuthUser(data?.user?.username || loginForm.username);
       setUserRole(data?.user?.role || 'clerk');
+      setUserPermissions(data?.user?.permissions || []);
       setLoginForm({ username: '', password: '' });
       setIsLoading(true);
       const schemaRes = await fetch('/api/schema', {
@@ -139,6 +161,8 @@ export default function App() {
     await fetch('/api/auth/logout', { method: 'POST' });
     setIsAuthenticated(false);
     setAuthUser('');
+    setUserRole('clerk');
+    setUserPermissions([]);
     setCredentials(null);
     setSchemaContext(null);
   };
@@ -329,9 +353,18 @@ export default function App() {
                     onChange={(e) => setSignupForm(prev => ({ ...prev, role: e.target.value }))}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                   >
+                    <option value="admin">System Admin</option>
                     <option value="clerk">Legal Clerk</option>
                     <option value="judge">Presiding Judge</option>
                     <option value="staff">Administrative Staff</option>
+                    <option value="attorney">Legal Counsel / Attorney</option>
+                    <option value="public">General Public</option>
+                    <option value="CASHIER">Court Cashier</option>
+                    <option value="MARSHALLS">Judge's Marshall</option>
+                    <option value="CHIEF JUSTICE">Chief Justice</option>
+                    <option value="REGISTRAR">Registrar General</option>
+                    <option value="STENOGRAPHERS">Court Stenographer</option>
+                    <option value="VAULT SEARCH">Vault Search Clerk</option>
                   </select>
                 </div>
                 {authError && <p className="text-xs text-red-400 bg-red-400/10 p-2 rounded-lg border border-red-400/20">{authError}</p>}
@@ -464,11 +497,16 @@ export default function App() {
           <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1">
             <button onClick={() => setActivePage('dashboard')} className={`px-2 py-1 rounded text-[10px] ${activePage === 'dashboard' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'}`}>Dashboard</button>
             <button onClick={() => setActivePage('calendar')} className={`px-2 py-1 rounded text-[10px] ${activePage === 'calendar' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'}`}>Calendar</button>
-            {userRole === 'admin' && (
+            {(userPermissions.includes('MNUREPORTS') || userPermissions.includes('MNUAGINGREPORTS')) && (
+              <button onClick={() => setActivePage('management')} className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 ${activePage === 'management' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'text-zinc-400 hover:text-zinc-100'}`}>
+                <ShieldAlert className="w-3 h-3" /> Oversight
+              </button>
+            )}
+            {userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'administrator' ? (
               <button onClick={() => setActivePage('admin')} className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 ${activePage === 'admin' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-100'}`}>
                 <ShieldCheck className="w-3 h-3" /> Admin
               </button>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -482,9 +520,11 @@ export default function App() {
       {/* Main Content: Full Screen Dashboard */}
       <main className="flex-1 overflow-hidden p-6 relative">
         {activePage === 'dashboard' ? (
-          <Dashboard credentials={credentials} initialCaseNumber={selectedCase} onCaseCleared={() => setSelectedCase(null)} />
+          <Dashboard credentials={credentials} initialCaseNumber={selectedCase} onCaseCleared={() => setSelectedCase(null)} permissions={userPermissions} />
         ) : activePage === 'calendar' ? (
           <CalendarPage credentials={credentials} onSelectCase={handleSelectCase} />
+        ) : activePage === 'management' ? (
+          <ManagementDashboard credentials={credentials} />
         ) : (
           <AdminDashboard credentials={credentials} onRefreshSchema={loadSchema} />
         )}

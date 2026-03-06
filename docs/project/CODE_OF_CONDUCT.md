@@ -1,7 +1,7 @@
 # Code of Conduct
 
 ## Our Pledge
-We are committed to providing a professional, respectful, and inclusive environment for all contributors and users of "The chatbot".
+We are committed to providing a professional, respectful, and inclusive environment for all contributors and users of LexiVault.
 
 ## Our Standards
 - **Professionalism**: Use welcoming and inclusive language.

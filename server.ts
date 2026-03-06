@@ -295,6 +295,29 @@ async function auditLog(username: string | null, action: string, targetType: str
     }
 }
 
+async function getRolePermissions(role: string): Promise<string[]> {
+    let connection;
+    try {
+        connection = await getDbConnection();
+        // Map simplified roles to database group codes
+        let dbRole = role;
+        if (role.toLowerCase() === 'admin') dbRole = 'ADMINISTRATOR';
+        else if (role.toLowerCase() === 'judge') dbRole = 'JUDGES';
+        else if (role.toLowerCase() === 'clerk') dbRole = 'DATA CLERK';
+        
+        const [rows] = await connection.execute(
+            "SELECT module_name FROM security_rights WHERE group_code = ? AND rights_status = 'ACTIVE'",
+            [dbRole]
+        );
+        await connection.end();
+        return (rows as any[]).map(r => r.module_name);
+    } catch (err) {
+        console.error("getRolePermissions error:", err);
+        if (connection) await (connection as any).end();
+        return [];
+    }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -333,8 +356,9 @@ async function startServer() {
     };
     const token = signAuthPayload(payload);
     await auditLog(username, "LOGIN_SUCCESS", "user", null, { role });
+    const permissions = await getRolePermissions(role);
     res.setHeader("Set-Cookie", `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200`);
-    return res.json({ ok: true, user: { username, role } });
+    return res.json({ ok: true, user: { username, role, permissions } });
   });
 
   app.post("/api/auth/signup", async (req, res) => {
@@ -414,7 +438,8 @@ async function startServer() {
     const token = readCookie(req, AUTH_COOKIE_NAME);
     const payload = verifyAuthToken(token);
     if (!payload) return res.status(401).json({ authenticated: false });
-    return res.json({ authenticated: true, user: { username: payload.sub, role: payload.role } });
+    const permissions = await getRolePermissions(payload.role);
+    return res.json({ authenticated: true, user: { username: payload.sub, role: payload.role, permissions } });
   });
 
   // Protect API routes except auth endpoints.
@@ -427,6 +452,16 @@ async function startServer() {
     (req as any).authUser = payload;
     return next();
   });
+
+  const requirePermission = (permission: string) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const user = (req as any).authUser;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    const permissions = await getRolePermissions(user.role);
+    if (!permissions.includes(permission) && user.role !== 'admin') {
+      return res.status(403).json({ error: `Permission denied: ${permission} required.` });
+    }
+    next();
+  };
 
   // 1. Initialization: Fetch Schema
   app.post("/api/schema", async (req, res) => {
@@ -1347,7 +1382,7 @@ Action Status: ${actionSuccess ? "Success" : "None"}
   });
 
   // 10. Operations: Finalize Case
-  app.post("/api/cases/finalize", async (req, res) => {
+  app.post("/api/cases/finalize", requirePermission('APPROVE_CASE'), async (req, res) => {
     try {
       const connection = await getDbConnection(req.body.credentials);
       await connection.execute('CALL sp_finalize_case(?, ?)', [req.body.claim_number, req.body.outcome]);
@@ -1545,6 +1580,29 @@ Action Status: ${actionSuccess ? "Success" : "None"}
     } catch (err: any) {
       res.status(500).json({ error: `Vault size calculation failed: ${err.message}` });
     }
+  });
+
+  // 11. Management & Oversight
+  app.get("/api/admin/workload", requirePermission('MNUREPORTS'), async (req, res) => {
+    try {
+      const connection = await getDbConnection();
+      const [rows] = await connection.execute('SELECT * FROM ai_judge_workload_today ORDER BY hearings_today DESC');
+      await connection.end();
+      res.json(rows);
+    } catch (error: any) { res.status(500).json({ error: error.message }); }
+  });
+
+  app.post("/api/admin/cases/bulk-close", requirePermission('MNUAGINGREPORTS'), async (req, res) => {
+    const { days_old, outcome } = req.body;
+    try {
+      const connection = await getDbConnection();
+      await connection.execute('CALL sp_bulk_close_stale_cases(?, ?)', [days_old || 365, outcome || 'Closed by Administrative Order']);
+      await connection.end();
+      const token = readCookie(req, AUTH_COOKIE_NAME);
+      const payload = verifyAuthToken(token);
+      await auditLog(payload?.sub || "admin", "BULK_CLOSE_STALE", "system", null, { days_old, outcome });
+      res.json({ success: true });
+    } catch (error: any) { res.status(500).json({ error: error.message }); }
   });
 
   if (process.env.NODE_ENV !== "production") {
